@@ -1,0 +1,11 @@
+# Ignore config.json to keep API keys secure
+config.json
+
+# Ignore Python bytecode files
+*.pyc
+
+# Ignore virtual environment
+venv/
+
+# Ignore other sensitive or unnecessary files
+.env

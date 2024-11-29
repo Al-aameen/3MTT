@@ -8,3 +8,5 @@
 2024-11-29 21:14:13,875 - Could not import comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0: No module named 'comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0'
 2024-11-29 21:14:13,877 - # Generating comtypes.gen._00020430_0000_0000_C000_000000000046_0_2_0
 2024-11-29 21:14:13,884 - # Generating comtypes.gen.stdole
+2024-11-29 21:16:48,826 - Imported existing <module 'comtypes.gen' from 'C:\\Users\\user\\Desktop\\afams\\3MTT\\.venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+2024-11-29 21:16:48,827 - Using writeable comtypes cache directory: 'C:\Users\user\Desktop\afams\3MTT\.venv\Lib\site-packages\comtypes\gen'

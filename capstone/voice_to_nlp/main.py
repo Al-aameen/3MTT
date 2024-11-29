@@ -90,7 +90,7 @@ EXIT_COMMANDS = ["exit", "quit", "stop", "goodbye"]
 # Initialize TTS engine globally
 tts_engine = pyttsx3.init()
 
-# Load Gemini API Key Securely
+# Load all API Key Securely
 try:
     with open("config.json", "r") as config_file:
         config = json.load(config_file)

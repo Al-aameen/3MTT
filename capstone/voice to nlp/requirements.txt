@@ -1,0 +1,9 @@
+google-generativeai
+pyaudio
+whisper
+numpy
+pyttsx3
+SpeechRecognition
+sounddevice
+scipy
+gtts

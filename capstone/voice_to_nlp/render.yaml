@@ -3,4 +3,4 @@ services:
     name: voice-assistant
     env: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python main.py"
+    startCommand: "gunicorn -w 4 -b 0.0.0.0:5000 main:app"

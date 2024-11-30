@@ -82,7 +82,7 @@ This is a voice assistant application that uses Google Cloud's Speech-to-Text, G
    Once everything is set up, you can run the assistant using:
 
    ```bash
-   python assistant.py
+   python main.py
    ```
 
 ## Functionality

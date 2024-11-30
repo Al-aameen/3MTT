@@ -44,7 +44,7 @@ class VoiceAssistantApp:
         def run_assistant():
             # Record audio and transcribe
             record_audio()
-            user_input = transcribe_audio_google()
+            user_input = transcribe_audio()
             self.update_text(self.transcription_text, user_input)
             
             if is_exit_command(user_input):

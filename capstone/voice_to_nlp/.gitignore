@@ -11,3 +11,35 @@ venv/
 .env
 
 assistant.log
+
+.ipynb_checkpoints
+
+
+
+
+# Ignore virtual environment
+whisper_env/
+env/
+venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore package directories
+site-packages/
+
+# Ignore log files
+*.log
+
+# Ignore compiled code
+*.so
+*.dll
+*.dylib
+*.lib
+
+# Ignore system-dependent files
+.DS_Store
+Thumbs.db

@@ -28,7 +28,7 @@ def process_audio():
     audio_file.save(audio_path)
 
     # Transcribe Audio
-    transcription = transcribe_audio_google(audio_path)
+    transcription = transcribe_audio(audio_path)
 
     # Process the transcription for entities
     entities = extract_entities(transcription)

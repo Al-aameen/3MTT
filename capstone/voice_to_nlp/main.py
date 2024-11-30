@@ -1,6 +1,7 @@
 import os
 import json
 import wave
+import whisper
 import logging
 import pyaudio
 import pyttsx3
@@ -10,13 +11,11 @@ import time
 import requests
 import numpy as np
 import spacy
-from datetime import datetime, timedelta
-
-# Suppress warnings
 import warnings
+from datetime import datetime, timedelta
 warnings.filterwarnings("ignore")
 
-os.system('python -m spacy download en_core_web_sm')
+# os.system('python -m spacy download en_core_web_sm')
 
 try:
     nlp = spacy.load("en_core_web_sm")
@@ -90,21 +89,17 @@ EXIT_COMMANDS = ["exit", "quit", "stop", "goodbye"]
 # Initialize TTS engine globally
 tts_engine = pyttsx3.init()
 
-# Load all API Key Securely
+# Load all API Keys
 try:
     with open("config.json", "r") as config_file:
         config = json.load(config_file)
     
     GEMINI_API_KEY = config.get("gemini_api_key")
-    GOOGLE_CLOUD_CREDENTIALS = config.get("google_cloud_credentials")
     WEATHER_API_KEY = config.get("weather_api_key")  # Load WeatherAPI key from config
 
-    # Check if the required keys are present in the config file
-    if not GEMINI_API_KEY or not GOOGLE_CLOUD_CREDENTIALS or not WEATHER_API_KEY:
+    if not GEMINI_API_KEY or not WEATHER_API_KEY:
         raise ValueError("API keys missing in config.json.")
     
-    # Set environment variables if needed
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_CLOUD_CREDENTIALS
     
 except FileNotFoundError:
     raise FileNotFoundError("config.json not found. Ensure it is in the working directory.")
@@ -126,7 +121,12 @@ safety_settings = [
     {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
 ]
 genai.configure(api_key=GEMINI_API_KEY)
-convo = genai.ChatModel().start_chat()
+ai_model = genai.GenerativeModel(
+    "gemini-1.5-pro-latest",
+    generation_config=generation_config,
+    safety_settings=safety_settings
+)
+convo = ai_model.start_chat()
 system_message = '''INSTRUCTIONS:
 You are a voice assistant. Use short, direct sentences to respond.'''
 convo.send_message(system_message)
@@ -146,7 +146,6 @@ def web_search(query, num_results=3):
         return f"Unable to perform web search. Error: {str(e)}"
 
 
-# Utility: Check exit command
 def is_exit_command(command):
     return command.strip().lower() in EXIT_COMMANDS
 
@@ -156,7 +155,7 @@ def log_interaction(user_input, assistant_response):
     logging.info(f"Assistant: {assistant_response}")
 
 # Record Audio
-def record_audio(filename="audio.wav", duration=15, silence_threshold=500, silence_duration=2):
+def record_audio(filename="audio.wav", duration=10, silence_threshold=500, silence_duration=2):
     chunk = 1024
     format = pyaudio.paInt16
     channels = 1
@@ -172,11 +171,9 @@ def record_audio(filename="audio.wav", duration=15, silence_threshold=500, silen
             data = stream.read(chunk)
             frames.append(data)
 
-            # Convert to numpy array for silence detection
             audio_data = np.frombuffer(data, dtype=np.int16)
             max_amplitude = np.max(np.abs(audio_data))
 
-            # Detect if audio is below the threshold (silence)
             if max_amplitude < silence_threshold:
                 if silence_start_time is None:
                     silence_start_time = time.time()
@@ -200,33 +197,41 @@ def record_audio(filename="audio.wav", duration=15, silence_threshold=500, silen
         wf.setframerate(rate)
         wf.writeframes(b"".join(frames))
 
-# Transcribe Audio using Google Speech-to-Text API
-def transcribe_audio_google(filename="audio.wav"):
-    client = speech.SpeechClient()
-    with wave.open(filename, "rb") as audio_file:
-        audio_content = audio_file.readframes(audio_file.getnframes())
-    audio = speech.RecognitionAudio(content=audio_content)
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=44100,
-        language_code="en-US"
-    )
+def transcribe_audio(filename="audio.wav"):
+    """
+    Transcribes audio using Whisper and returns the transcription text.
+    
+    Args:
+        filename (str): Path to the audio file to be transcribed.
+        
+    Returns:
+        str: Transcribed text from the audio file.
+    """
+    model = whisper.load_model("base")
+
+    options = {
+        "language": "en",     
+        "beam_size": 5,       
+        "temperature": 0.5,    
+        "best_of": 5,          
+    }
+
     try:
-        response = client.recognize(config=config, audio=audio)
-        for result in response.results:
-            return result.alternatives[0].transcript
+        result = model.transcribe(filename, **options)
+        return result["text"]
     except Exception as e:
         print(f"Error during transcription: {e}")
         return ""
 
+
 # Generate NLP Response
 def get_nlp_response(prompt):
     try:
-        response = convo.send_message(prompt)
-        if response and response.messages:
-            return response.messages[-1].content
+        response = convo.generate_content(prompt)
+        if response and response.candidates:
+            return response.candidates[0].content.parts[0].text
         else:
-            return "Sorry, I couldn't understand that."
+            return "I'm sorry, I couldn't generate a response."
     except Exception as e:
         print(f"Error generating response: {e}")
         return "I'm having trouble understanding you. Please try again."
@@ -252,7 +257,6 @@ def process_entities(entities):
         return response
 
     elif "weather" in entities["task"].lower():
-        # Extract city name for weather query
         city = entities["task"].replace("weather in", "").strip()
         return get_weather(city)
 
@@ -268,28 +272,24 @@ def voice_assistant():
     print("Voice Assistant Active. Say 'exit' to end the conversation.")
     while True:
         print("Listening for your input...")
-        record_audio()  # Step 1: Record audio
-
-        user_input = transcribe_audio_google()  # Step 2: Transcribe using Google
+        record_audio()  
+        user_input = transcribe_audio()  
         print("User:", user_input)
 
-        if is_exit_command(user_input):  # Exit condition
+        if is_exit_command(user_input):  
             print("Goodbye!")
             text_to_speech("Goodbye!")
             break
 
-        # Step 3: Process entities
         entities = extract_entities(user_input)
         if entities["task"] or entities["date"] or entities["time"]:
             assistant_response = process_entities(entities)
         else:
-            # Fall back to NLP response if no actionable entities are found
             assistant_response = get_nlp_response(user_input)
 
         print("Assistant:", assistant_response)
-        log_interaction(user_input, assistant_response)  # Log interaction
-        text_to_speech(assistant_response)  # Step 4: Speak the response
-
+        log_interaction(user_input, assistant_response)  
+        text_to_speech(assistant_response)  
 
 # Run the voice assistant
 if __name__ == "__main__":
